@@ -7,12 +7,23 @@ dotenv.config();
 
 const resolvedDbName = process.env.DB_NAME || process.env.PGDATABASE || 'leqet_fit_coacha';
 
+// Enable SSL for managed Postgres providers (like Render) that require TLS
+const isProduction = process.env.NODE_ENV === 'production';
+const sslSetting = process.env.DB_SSL
+  ? process.env.DB_SSL === 'true'
+    ? { rejectUnauthorized: false }
+    : undefined
+  : isProduction
+  ? { rejectUnauthorized: false }
+  : undefined;
+
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 5432,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: resolvedDbName,
+  ssl: sslSetting,
 });
 
 pool.on('error', (err) => {
