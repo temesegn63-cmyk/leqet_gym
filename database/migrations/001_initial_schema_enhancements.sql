@@ -1,6 +1,6 @@
--- ============================
+  
 --        SCHEMA ENHANCEMENTS
--- ============================
+  
 
 -- 1. Add security fields to users table
 ALTER TABLE users 
@@ -161,49 +161,36 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes 
         WHERE indexname = 'idx_notifications_user_read'
-    ) THEN
-        CREATE INDEX idx_notifications_user_read 
-        ON notifications(user_id, is_read);
-    END IF;
-END $$;
 
 -- 9. Enable full-text search on food_items
-DO $$
+-- Add search_vector column (safe to use IF NOT EXISTS since this migration runs once per DB)
+ALTER TABLE food_items 
+  ADD COLUMN IF NOT EXISTS search_vector TSVECTOR;
+
+-- Create the index for search_vector
+CREATE INDEX IF NOT EXISTS food_items_search_idx 
+  ON food_items USING GIN(search_vector);
+
+-- Create or replace the function that maintains search_vector
+CREATE OR REPLACE FUNCTION food_items_search_update() 
+RETURNS TRIGGER AS $food_items_search$
 BEGIN
-    -- Add search_vector column if not exists
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_name = 'food_items' AND column_name = 'search_vector'
-    ) THEN
-        ALTER TABLE food_items 
-        ADD COLUMN search_vector TSVECTOR;
-        
-        -- Create the index
-        CREATE INDEX food_items_search_idx 
-        ON food_items USING GIN(search_vector);
-        
-        -- Create the update function
-        CREATE OR REPLACE FUNCTION food_items_search_update() 
-        RETURNS TRIGGER AS $$
-        BEGIN
-            NEW.search_vector = 
-                setweight(to_tsvector('english', COALESCE(NEW.name,'')), 'A') ||
-                setweight(to_tsvector('english', COALESCE(NEW.category,'')), 'B');
-            RETURN NEW;
-        END
-        $$ LANGUAGE plpgsql;
-        
-        -- Create the trigger
-        CREATE TRIGGER tsvectorupdate 
-        BEFORE INSERT OR UPDATE ON food_items 
-        FOR EACH ROW EXECUTE FUNCTION food_items_search_update();
-        
-        -- Update existing rows
-        UPDATE food_items SET search_vector = 
-            setweight(to_tsvector('english', COALESCE(name,'')), 'A') ||
-            setweight(to_tsvector('english', COALESCE(category,'')), 'B');
-    END IF;
-END $$;
+    NEW.search_vector = 
+        setweight(to_tsvector('english', COALESCE(NEW.name,'')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.category,'')), 'B');
+    RETURN NEW;
+END
+$food_items_search$ LANGUAGE plpgsql;
+
+-- Create the trigger to update search_vector
+CREATE TRIGGER tsvectorupdate 
+BEFORE INSERT OR UPDATE ON food_items 
+FOR EACH ROW EXECUTE FUNCTION food_items_search_update();
+
+-- Backfill existing rows
+UPDATE food_items SET search_vector = 
+    setweight(to_tsvector('english', COALESCE(name,'')), 'A') ||
+    setweight(to_tsvector('english', COALESCE(category,'')), 'B');
 
 -- 10. Create a view for weekly nutrition summary
 CREATE OR REPLACE VIEW weekly_nutrition_summary AS
