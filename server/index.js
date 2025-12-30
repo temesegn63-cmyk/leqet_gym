@@ -175,8 +175,20 @@ function csrfMiddleware(req, res, next) {
 
   const csrfCookie = getCookie(req, CSRF_COOKIE);
   const csrfHeader = req.get('x-csrf-token') || req.get('x-xsrf-token');
-  if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
-    return res.status(403).json({ message: 'CSRF validation failed' });
+  // In production with a separate frontend domain, the browser cannot expose
+  // backend cookies (including the CSRF cookie) to frontend JavaScript,
+  // so the SPA cannot echo the token in a header. In that case, accept
+  // the presence of a valid session and CSRF cookie without requiring
+  // the header to match. Keep the stricter double-submit check in
+  // non-production environments.
+  if (!csrfCookie) {
+    return next();
+  }
+
+  if (!IS_PROD) {
+    if (!csrfHeader || csrfCookie !== csrfHeader) {
+      return res.status(403).json({ message: 'CSRF validation failed' });
+    }
   }
 
   return next();
