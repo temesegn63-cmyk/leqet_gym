@@ -126,7 +126,7 @@ function setSessionCookies(res, { token, csrfToken }) {
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     maxAge: SESSION_MAX_AGE_MS,
     path: '/',
   });
@@ -134,7 +134,7 @@ function setSessionCookies(res, { token, csrfToken }) {
   res.cookie(CSRF_COOKIE, csrfToken, {
     httpOnly: false,
     secure: IS_PROD,
-    sameSite: 'lax',
+    sameSite: IS_PROD ? 'none' : 'lax',
     maxAge: SESSION_MAX_AGE_MS,
     path: '/',
   });
