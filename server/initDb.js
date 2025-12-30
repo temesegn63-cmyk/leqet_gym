@@ -82,14 +82,12 @@ async function applyMigrations() {
     if (applied.has(file)) continue;
     const fullPath = path.join(migrationsDir, file);
     const sql = fs.readFileSync(fullPath, 'utf8');
-    await query('BEGIN');
     try {
       await query(sql);
       await markMigrationApplied(file);
-      await query('COMMIT');
       applied.add(file);
     } catch (e) {
-      await query('ROLLBACK');
+      console.error(`Migration failed for file ${file}:`, e);
       throw e;
     }
   }
