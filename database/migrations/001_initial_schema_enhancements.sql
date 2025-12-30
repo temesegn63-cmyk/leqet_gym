@@ -161,6 +161,11 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes 
         WHERE indexname = 'idx_notifications_user_read'
+    ) THEN
+        CREATE INDEX idx_notifications_user_read 
+        ON notifications(user_id, is_read);
+    END IF;
+END $$;
 
 -- 9. Enable full-text search on food_items
 -- Add search_vector column (safe to use IF NOT EXISTS since this migration runs once per DB)
