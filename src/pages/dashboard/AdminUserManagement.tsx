@@ -164,7 +164,7 @@ const AdminUserManagement: React.FC = () => {
       toast({
         title: `${role.charAt(0).toUpperCase() + role.slice(1)} Registered`,
         description: isMember
-          ? `Member invited successfully. They can request an OTP from the signup page when they are ready to activate their account.`
+          ? `Member invited successfully. They can complete their registration from the signup page when they are ready to activate their account.`
           : `${role.charAt(0).toUpperCase() + role.slice(1)} account created successfully`,
       });
 

@@ -394,7 +394,7 @@ const Login: React.FC = () => {
           <p className="text-muted-foreground">
             Invited by your admin?{' '}
             <Link to="/signup" className="font-semibold hover:underline text-primary">
-              Sign up with OTP
+              Complete your registration
             </Link>
           </p>
         </div>

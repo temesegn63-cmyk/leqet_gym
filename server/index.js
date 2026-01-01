@@ -312,6 +312,8 @@ const smtpConnectionTimeoutMs = Number(process.env.SMTP_CONNECTION_TIMEOUT_MS) |
 const smtpSocketTimeoutMs = Number(process.env.SMTP_SOCKET_TIMEOUT_MS) || 10_000;
 const smtpSendTimeoutMs = Number(process.env.SMTP_SEND_TIMEOUT_MS) || 12_000;
 
+const brevoApiKey = process.env.BREVO_API_KEY || '';
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: smtpPort,
@@ -326,17 +328,50 @@ const transporter = nodemailer.createTransport({
 
 async function sendOtpEmail(email, name, otp) {
   const fromEmail = process.env.FROM_EMAIL || process.env.SMTP_USER;
-
-  const mailOptions = {
-    from: `Leqet Gym <${fromEmail}>`,
-    to: email,
-    subject: 'Your Leqet Gym account activation code',
-    text: `Hi${name ? ` ${name}` : ''},\n\nYour one-time password (OTP) is: ${otp}\nIt is valid for 15 minutes.\n\nIf you did not request this, you can ignore this email.`,
-    html: `<p>Hi${name ? ` ${name}` : ''},</p>
+  const subject = 'Your Leqet Gym account activation code';
+  const text = `Hi${name ? ` ${name}` : ''},\n\nYour one-time password (OTP) is: ${otp}\nIt is valid for 15 minutes.\n\nIf you did not request this, you can ignore this email.`;
+  const html = `<p>Hi${name ? ` ${name}` : ''},</p>
            <p>Your one-time password (OTP) is:</p>
            <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${otp}</p>
            <p>It is valid for 15 minutes.</p>
-           <p>If you did not request this, you can ignore this email.</p>`,
+           <p>If you did not request this, you can ignore this email.</p>`;
+
+  // Prefer Brevo HTTP API when configured (avoids SMTP port issues)
+  if (brevoApiKey) {
+    try {
+      await withTimeout(
+        axios.post(
+          'https://api.brevo.com/v3/smtp/email',
+          {
+            sender: { email: fromEmail, name: 'Leqet Gym' },
+            to: [{ email }],
+            subject,
+            textContent: text,
+            htmlContent: html,
+          },
+          {
+            headers: {
+              'api-key': brevoApiKey,
+            },
+          }
+        ),
+        smtpSendTimeoutMs,
+        'Brevo sendOtpEmail HTTP'
+      );
+      return;
+    } catch (error) {
+      console.error('Failed to send OTP email via Brevo HTTP:', error);
+      throw error;
+    }
+  }
+
+  // Fallback to SMTP if Brevo HTTP API is not configured
+  const mailOptions = {
+    from: `Leqet Gym <${fromEmail}>`,
+    to: email,
+    subject,
+    text,
+    html,
   };
 
   assertSmtpConfigured();
@@ -347,24 +382,57 @@ async function sendOtpEmail(email, name, otp) {
       'SMTP sendOtpEmail sendMail'
     );
   } catch (error) {
-    console.error('Failed to send OTP email:', error);
+    console.error('Failed to send OTP email via SMTP:', error);
     throw error;
   }
 }
 
 async function sendPasswordResetEmail(email, name, otp) {
   const fromEmail = process.env.FROM_EMAIL || process.env.SMTP_USER;
-
-  const mailOptions = {
-    from: `Leqet Gym <${fromEmail}>`,
-    to: email,
-    subject: 'Your Leqet Gym password reset code',
-    text: `Hi${name ? ` ${name}` : ''},\n\nYour password reset code is: ${otp}\nIt is valid for 10 minutes.\n\nIf you did not request this, you can ignore this email.`,
-    html: `<p>Hi${name ? ` ${name}` : ''},</p>
+  const subject = 'Your Leqet Gym password reset code';
+  const text = `Hi${name ? ` ${name}` : ''},\n\nYour password reset code is: ${otp}\nIt is valid for 10 minutes.\n\nIf you did not request this, you can ignore this email.`;
+  const html = `<p>Hi${name ? ` ${name}` : ''},</p>
            <p>Your password reset code is:</p>
            <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${otp}</p>
            <p>It is valid for 10 minutes.</p>
-           <p>If you did not request this, you can ignore this email.</p>`,
+           <p>If you did not request this, you can ignore this email.</p>`;
+
+  // Prefer Brevo HTTP API when configured
+  if (brevoApiKey) {
+    try {
+      await withTimeout(
+        axios.post(
+          'https://api.brevo.com/v3/smtp/email',
+          {
+            sender: { email: fromEmail, name: 'Leqet Gym' },
+            to: [{ email }],
+            subject,
+            textContent: text,
+            htmlContent: html,
+          },
+          {
+            headers: {
+              'api-key': brevoApiKey,
+            },
+          }
+        ),
+        smtpSendTimeoutMs,
+        'Brevo sendPasswordResetEmail HTTP'
+      );
+      return;
+    } catch (error) {
+      console.error('Failed to send password reset email via Brevo HTTP:', error);
+      throw error;
+    }
+  }
+
+  // Fallback to SMTP if Brevo HTTP API is not configured
+  const mailOptions = {
+    from: `Leqet Gym <${fromEmail}>`,
+    to: email,
+    subject,
+    text,
+    html,
   };
 
   assertSmtpConfigured();
@@ -375,7 +443,7 @@ async function sendPasswordResetEmail(email, name, otp) {
       'SMTP sendPasswordResetEmail sendMail'
     );
   } catch (error) {
-    console.error('Failed to send password reset email:', error);
+    console.error('Failed to send password reset email via SMTP:', error);
     throw error;
   }
 }
@@ -2849,39 +2917,49 @@ app.post('/api/auth/request-otp', async (req, res) => {
   }
 });
 
-// Activate account with OTP and set password
+// Activate account and set password (OTP-free flow)
 app.post('/api/auth/activate', async (req, res) => {
-  const { email, otp, full_name, password } = req.body || {};
+  const { email, full_name, password } = req.body || {};
 
-  if (!email || !otp || !password) {
-    return res.status(400).json({ message: 'email, otp and password are required' });
+  if (!email || !password) {
+    return res.status(400).json({ message: 'email and password are required' });
   }
 
   try {
     const result = await query(
-      'SELECT id, full_name FROM users WHERE email = $1',
+      'SELECT id, full_name, status, password_hash FROM users WHERE email = $1',
       [email]
     );
+
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
+
     const user = result.rows[0];
-    const verifyResult = await query(
-      'SELECT verify_activation_otp($1, $2, $3, $4) AS ok',
-      [user.id, otp, req.ip || null, req.get('user-agent') || null]
-    );
-    if (!verifyResult.rows[0].ok) {
-      return res.status(400).json({ message: 'Invalid or expired OTP' });
+
+    if (user.status === 'active' && user.password_hash) {
+      return res.status(400).json({ message: 'Account is already activated' });
     }
+
     const passwordHash = await bcrypt.hash(password, 10);
     await query(
-      'UPDATE users SET password_hash = $1, full_name = COALESCE($2, full_name) WHERE id = $3',
+      `UPDATE users
+       SET password_hash = $1,
+           full_name = COALESCE($2, full_name),
+           status = 'active',
+           email_verified = TRUE,
+           activation_otp = NULL,
+           otp_expires_at = NULL,
+           activated_at = NOW()
+       WHERE id = $3`,
       [passwordHash, full_name || null, user.id]
- );
+    );
+
     return res.json({ ok: true });
   } catch (error) {
     console.error('Error activating account:', error);
-    return res.status(500).json({ message: 'Failed to activate account' });}
+    return res.status(500).json({ message: 'Failed to activate account' });
+  }
 });
 
 // Forgot password: request OTP

@@ -1,12 +1,9 @@
--- Base schema for Leqet Fit Coach
+ 
+ 
 
--- ============================
---         COMPLETE SCHEMA
--- ============================
-
--- ============================
+ 
 --         USERS & ROLES
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -18,9 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- ============================
+ 
 --       MEMBER PROFILES
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS member_profiles (
     user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -33,9 +30,9 @@ CREATE TABLE IF NOT EXISTS member_profiles (
     is_private BOOLEAN DEFAULT FALSE
 );
 
--- ============================
+ 
 --    TRAINER / NUTRITIONIST ASSIGNMENTS
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS trainer_assignments (
     member_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -51,10 +48,10 @@ CREATE TABLE IF NOT EXISTS nutritionist_assignments (
     PRIMARY KEY(member_id)
 );
 
--- ============================
+ 
 --          FOOD ITEMS
 --   (Local + External API)
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS food_items (
     id SERIAL PRIMARY KEY,
@@ -89,9 +86,9 @@ BEGIN
     END IF;
 END $$;
 
--- ============================
+ 
 --        MEAL LOGGING
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS meal_logs (
     id SERIAL PRIMARY KEY,
@@ -112,9 +109,9 @@ CREATE TABLE IF NOT EXISTS meal_log_items (
     carbs NUMERIC NOT NULL
 );
 
--- ============================
+ 
 --        WORKOUT SYSTEM
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS exercises (
     id SERIAL PRIMARY KEY,
@@ -137,9 +134,9 @@ CREATE TABLE IF NOT EXISTS workout_log_items (
     calories_burned NUMERIC
 );
 
--- ============================
+ 
 --     MEAL + WORKOUT PLANS
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS diet_plans (
     id SERIAL PRIMARY KEY,
@@ -157,9 +154,9 @@ CREATE TABLE IF NOT EXISTS workout_plans (
     notes TEXT
 );
 
--- ============================
+ 
 --          FEEDBACK
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS trainer_feedback (
     id SERIAL PRIMARY KEY,
@@ -177,9 +174,9 @@ CREATE TABLE IF NOT EXISTS nutritionist_feedback (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ============================
---         SCHEDULES
--- ============================
+ 
+--         schedules
+ 
 
 CREATE TABLE IF NOT EXISTS schedules (
     id SERIAL PRIMARY KEY,
@@ -192,9 +189,9 @@ CREATE TABLE IF NOT EXISTS schedules (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ============================
---      NOTIFICATIONS
--- ============================
+ 
+--      notification
+ 
 
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
@@ -204,9 +201,9 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN DEFAULT FALSE
 );
 
--- ============================
+ 
 --        SYSTEM LOGS
--- ============================
+ 
 
 CREATE TABLE IF NOT EXISTS system_logs (
     id SERIAL PRIMARY KEY,
@@ -215,9 +212,9 @@ CREATE TABLE IF NOT EXISTS system_logs (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ============================
+ 
 --    INSERT ALL FOOD ITEMS
--- ============================
+ 
 
 INSERT INTO food_items 
 (name, serving_size, serving_method, calories, protein, fat, carbs, category, is_local) VALUES

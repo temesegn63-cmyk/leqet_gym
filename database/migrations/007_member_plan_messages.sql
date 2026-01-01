@@ -1,6 +1,6 @@
--- ================================
+  ====
 --  MEMBER PLAN MESSAGES (COACH–MEMBER CONVERSATIONS)
--- ================================
+  ====
 
 CREATE TABLE IF NOT EXISTS member_plan_messages (
   id SERIAL PRIMARY KEY,

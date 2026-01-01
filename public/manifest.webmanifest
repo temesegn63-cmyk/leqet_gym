@@ -1,0 +1,24 @@
+{
+  "name": "Leqet Gym - Personalized Fitness Platform",
+  "short_name": "Leqet Gym",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#020817",
+  "theme_color": "#020817",
+  "description": "Personalized Diet and Workout Recommender System for Leqet Gym in Addis Ababa, Ethiopia",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48 72x72 96x96 128x128 256x256",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/placeholder.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
